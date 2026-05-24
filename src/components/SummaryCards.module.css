@@ -1,0 +1,68 @@
+.section {
+  width: 100%;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-top: 3px solid transparent;
+}
+
+.savings {
+  border-top-color: var(--success);
+}
+
+.time {
+  border-top-color: var(--primary);
+}
+
+.profit {
+  border-top-color: var(--warning);
+}
+
+.profitAuto {
+  border-top-color: var(--accent);
+}
+
+.cardLabel {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cardValue {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cardExtra {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}

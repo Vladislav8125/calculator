@@ -1,0 +1,74 @@
+.section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border);
+}
+
+.manual {
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+.auto {
+  text-align: right;
+  color: var(--primary);
+}
+
+.td {
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.manualCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.autoCell {
+  text-align: right;
+  font-weight: 500;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.highlightRow {
+  background: var(--surface-alt);
+  font-weight: 600;
+}
+
+.highlightRow .td {
+  font-weight: 600;
+}
+
+.highlightRow .autoCell {
+  color: var(--success);
+}
