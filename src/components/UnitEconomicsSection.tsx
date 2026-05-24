@@ -1,41 +1,53 @@
 import { useState } from 'react'
-import type { CalculatorInputs, UnitEconomicsResult } from '../types'
-import { formatCurrency, formatNumber } from '../utils/calculations'
+import type { CalculatorResult } from '../types'
+import {
+  calculateUnitEconomics,
+  formatCurrency,
+  formatNumber,
+} from '../utils/calculations'
 import styles from './UnitEconomicsSection.module.css'
 
 interface Props {
-  economics: UnitEconomicsResult
-  inputs: CalculatorInputs
+  result: CalculatorResult
 }
 
-export function UnitEconomicsSection({ economics, inputs }: Props) {
-  const [mode, setMode] = useState<'automated' | 'manual'>('automated')
-  const rows = mode === 'automated' ? economics.automated : economics.manual
+export function UnitEconomicsSection({ result }: Props) {
+  const [withAutomation, setWithAutomation] = useState(true)
+  const rows = calculateUnitEconomics(result, withAutomation)
 
   return (
     <section className={styles.section}>
       <div className={styles.header}>
-        <h2 className={styles.sectionTitle}>Юнит-экономика</h2>
+        <h2 className={styles.sectionTitle}>Юнит-экономика по маржинальности</h2>
         <div className={styles.toggle}>
           <button
-            className={`${styles.toggleBtn} ${mode === 'automated' ? styles.active : ''}`}
-            onClick={() => setMode('automated')}
+            className={`${styles.toggleBtn} ${withAutomation ? styles.active : ''}`}
+            onClick={() => setWithAutomation(true)}
           >
-            🤖 Авто
+            🤖 С автоматизацией
           </button>
           <button
-            className={`${styles.toggleBtn} ${mode === 'manual' ? styles.active : ''}`}
-            onClick={() => setMode('manual')}
+            className={`${styles.toggleBtn} ${!withAutomation ? styles.active : ''}`}
+            onClick={() => setWithAutomation(false)}
           >
-            🖊 Ручной
+            📦 Без автоматизации
           </button>
         </div>
       </div>
 
       <p className={styles.note}>
-        Текущая цена для клиента: <strong>{formatCurrency(inputs.clientPricePerHour)}</strong> за час
-        &nbsp;·&nbsp; Объём: <strong>{formatNumber(inputs.videoHours)}</strong> ч/проект
-        &nbsp;·&nbsp; <strong>{formatNumber(inputs.projectsPerMonth, 0)}</strong> проектов/мес
+        Себестоимость проекта:{' '}
+        <strong>
+          {formatCurrency(
+            withAutomation
+              ? result.costs.projectCostWithAutomationRub
+              : result.costs.projectCostWithoutAutomationRub,
+          )}
+        </strong>
+        &nbsp;·&nbsp; Рилсов:{' '}
+        <strong>{formatNumber(result.project.totalReels, 0)}</strong>
+        &nbsp;·&nbsp; Часов видео:{' '}
+        <strong>{formatNumber(result.project.totalVideoHours, 1)}</strong>
       </p>
 
       <div className={styles.tableWrap}>
@@ -43,12 +55,10 @@ export function UnitEconomicsSection({ economics, inputs }: Props) {
           <thead>
             <tr>
               <th className={styles.th}>Маржа</th>
-              <th className={styles.th}>Цена за час</th>
+              <th className={styles.th}>Цена за рилс</th>
               <th className={styles.th}>Выручка / проект</th>
               <th className={styles.th}>Прибыль / проект</th>
-              <th className={styles.th}>Выручка / мес</th>
-              <th className={styles.th}>Прибыль / мес</th>
-              <th className={styles.th}>Безубыточность</th>
+              <th className={styles.th}>Прибыль / рилс</th>
               <th className={styles.th}>ROI</th>
             </tr>
           </thead>
@@ -59,7 +69,7 @@ export function UnitEconomicsSection({ economics, inputs }: Props) {
                   {row.margin}%
                 </td>
                 <td className={styles.td}>
-                  {formatCurrency(row.sellingPricePerHour)}
+                  {formatCurrency(row.sellingPricePerReel)}
                 </td>
                 <td className={styles.td}>
                   {formatCurrency(row.revenuePerProject)}
@@ -69,18 +79,10 @@ export function UnitEconomicsSection({ economics, inputs }: Props) {
                 >
                   {formatCurrency(row.profitPerProject)}
                 </td>
-                <td className={styles.td}>
-                  {formatCurrency(row.monthlyRevenue)}
-                </td>
                 <td
-                  className={`${styles.td} ${row.monthlyProfit >= 0 ? styles.positive : styles.negative}`}
+                  className={`${styles.td} ${row.profitPerReel >= 0 ? styles.positive : styles.negative}`}
                 >
-                  {formatCurrency(row.monthlyProfit)}
-                </td>
-                <td className={styles.td}>
-                  {row.breakEvenProjects === Infinity
-                    ? '—'
-                    : `${row.breakEvenProjects} проект.`}
+                  {formatCurrency(row.profitPerReel)}
                 </td>
                 <td className={styles.td}>{formatNumber(row.roi)}%</td>
               </tr>

@@ -4,7 +4,7 @@
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
 
@@ -28,12 +28,20 @@
   border-top-color: var(--primary);
 }
 
-.profit {
+.client {
+  border-top-color: var(--accent);
+}
+
+.cost {
   border-top-color: var(--warning);
 }
 
-.profitAuto {
-  border-top-color: var(--accent);
+.costAuto {
+  border-top-color: #f97316;
+}
+
+.margin {
+  border-top-color: var(--success);
 }
 
 .cardLabel {

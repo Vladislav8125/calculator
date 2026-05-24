@@ -1,62 +1,81 @@
 export interface CalculatorInputs {
-  videoHours: number
-  projectsPerMonth: number
-  manualCostPerHour: number
-  manualTimeMultiplier: number
-  apiCostPerMinute: number
-  monthlyServiceCost: number
-  editTimeRatio: number
+  videoCount: number
+  videoDurationMinutes: number
+  primaryServiceId: string
+  secondaryServiceId: string | null
   clientPricePerHour: number
-  monthlyOverhead: number
+  usdToRubRate: number
 }
 
-export interface CostBreakdown {
-  laborHours: number
-  laborCost: number
-  apiCost: number
-  serviceCost: number
-  totalPerProject: number
-  totalMonthly: number
-  costPerVideoHour: number
-  timePerProject: number
+export interface ProjectMetrics {
+  totalVideoHours: number
+  totalReels: number
+  processingMinutesPerHour: number
+  totalProcessingMinutes: number
+  timePerReelMinutes: number
 }
 
-export interface ComparisonResult {
-  manual: CostBreakdown
-  automated: CostBreakdown
-  savingsPerProject: number
-  savingsMonthly: number
-  savingsPercent: number
-  timeSavedPerProject: number
-  timeSavedPercent: number
+export interface CostMetrics {
+  processingCostPerHourRub: number
+  monthlySubscriptionRub: number
+  projectProcessingCostRub: number
+  automationCostRub: number
+  projectCostWithoutAutomationRub: number
+  projectCostWithAutomationRub: number
+  reelCostWithoutAutomationRub: number
+  reelCostWithAutomationRub: number
+}
+
+export interface ClientMetrics {
+  clientPricePerHour: number
+  reelPriceForClient: number
+  projectPriceForClient: number
+  marginWithoutAutomation: number
+  marginWithAutomation: number
+}
+
+export interface CalculatorResult {
+  project: ProjectMetrics
+  costs: CostMetrics
+  client: ClientMetrics
 }
 
 export interface UnitEconomicsRow {
   margin: number
-  sellingPricePerHour: number
+  sellingPricePerReel: number
   revenuePerProject: number
   profitPerProject: number
-  monthlyRevenue: number
-  monthlyProfit: number
-  breakEvenProjects: number
+  profitPerReel: number
   roi: number
 }
 
-export interface UnitEconomicsResult {
-  manual: UnitEconomicsRow[]
-  automated: UnitEconomicsRow[]
+export interface SalesFunnelStep {
+  stage: string
+  count: number
+  conversionRate: number | null
+}
+
+export interface SalesFunnelResult {
+  targetRevenue: number
+  projectPrice: number
+  projectsNeeded: number
+  steps: SalesFunnelStep[]
 }
 
 export const DEFAULT_INPUTS: CalculatorInputs = {
-  videoHours: 10,
-  projectsPerMonth: 8,
-  manualCostPerHour: 500,
-  manualTimeMultiplier: 4,
-  apiCostPerMinute: 0.6,
-  monthlyServiceCost: 3000,
-  editTimeRatio: 0.5,
-  clientPricePerHour: 2500,
-  monthlyOverhead: 15000,
+  videoCount: 5,
+  videoDurationMinutes: 60,
+  primaryServiceId: 'vizard',
+  secondaryServiceId: null,
+  clientPricePerHour: 5000,
+  usdToRubRate: 95,
 }
 
 export const MARGINS = [10, 20, 30, 40, 50, 60]
+
+export const FUNNEL_CONVERSION_RATES = {
+  leadToQualified: 0.4,
+  qualifiedToMeeting: 0.5,
+  meetingToProposal: 0.6,
+  proposalToDeal: 0.35,
+}

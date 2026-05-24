@@ -1,23 +1,24 @@
 import { useState, useMemo } from 'react'
 import type { CalculatorInputs } from './types'
 import { DEFAULT_INPUTS } from './types'
-import { calculateComparison, calculateUnitEconomics } from './utils/calculations'
+import { calculate, calculateSalesFunnel } from './utils/calculations'
 import { InputSection } from './components/InputSection'
-import { ComparisonSection } from './components/ComparisonSection'
-import { UnitEconomicsSection } from './components/UnitEconomicsSection'
 import { SummaryCards } from './components/SummaryCards'
+import { ExpensesSection } from './components/ExpensesSection'
+import { UnitEconomicsSection } from './components/UnitEconomicsSection'
+import { SalesFunnelSection } from './components/SalesFunnelSection'
 import styles from './App.module.css'
 
 function App() {
   const [inputs, setInputs] = useState<CalculatorInputs>(DEFAULT_INPUTS)
 
-  const comparison = useMemo(() => calculateComparison(inputs), [inputs])
-  const unitEconomics = useMemo(
-    () => calculateUnitEconomics(inputs, comparison),
-    [inputs, comparison],
-  )
+  const result = useMemo(() => calculate(inputs), [inputs])
+  const funnel = useMemo(() => calculateSalesFunnel(result), [result])
 
-  const handleChange = (field: keyof CalculatorInputs, value: number) => {
+  const handleChange = (
+    field: keyof CalculatorInputs,
+    value: number | string | null,
+  ) => {
     setInputs((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -27,16 +28,18 @@ function App() {
         <div className={styles.headerContent}>
           <h1 className={styles.title}>Калькулятор экономики проектов</h1>
           <p className={styles.subtitle}>
-            Расчёт затрат на расшифровку видео: ручной vs автоматизированный подход
+            Расчёт стоимости обработки видео через AI-сервисы и юнит-экономика
+            рилсов
           </p>
         </div>
       </header>
 
       <main className={styles.main}>
         <InputSection inputs={inputs} onChange={handleChange} />
-        <SummaryCards comparison={comparison} inputs={inputs} />
-        <ComparisonSection comparison={comparison} />
-        <UnitEconomicsSection economics={unitEconomics} inputs={inputs} />
+        <SummaryCards result={result} />
+        <ExpensesSection result={result} />
+        <UnitEconomicsSection result={result} />
+        <SalesFunnelSection funnel={funnel} />
       </main>
 
       <footer className={styles.footer}>

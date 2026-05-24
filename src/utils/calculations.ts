@@ -1,144 +1,193 @@
+import {
+  AUTOMATION_COST_RUB,
+  AUTOMATION_HOURS,
+  getServiceById,
+  PROCESSING_MINUTES_ONE_SERVICE,
+  PROCESSING_MINUTES_TWO_SERVICES,
+  REELS_PER_HOUR,
+} from '../data/services'
 import type {
   CalculatorInputs,
-  CostBreakdown,
-  ComparisonResult,
+  CalculatorResult,
+  SalesFunnelResult,
+  SalesFunnelStep,
   UnitEconomicsRow,
-  UnitEconomicsResult,
 } from '../types'
-import { MARGINS } from '../types'
+import { FUNNEL_CONVERSION_RATES, MARGINS } from '../types'
 
-function calcManual(inputs: CalculatorInputs): CostBreakdown {
-  const laborHours = inputs.videoHours * inputs.manualTimeMultiplier
-  const laborCost = laborHours * inputs.manualCostPerHour
-  const overheadPerProject = inputs.monthlyOverhead / inputs.projectsPerMonth
-  const totalPerProject = laborCost + overheadPerProject
-  const totalMonthly =
-    laborCost * inputs.projectsPerMonth + inputs.monthlyOverhead
-
-  return {
-    laborHours,
-    laborCost,
-    apiCost: 0,
-    serviceCost: 0,
-    totalPerProject,
-    totalMonthly,
-    costPerVideoHour: totalPerProject / inputs.videoHours,
-    timePerProject: laborHours,
-  }
+function getSelectedServices(inputs: CalculatorInputs) {
+  const primary = getServiceById(inputs.primaryServiceId)
+  const secondary = getServiceById(inputs.secondaryServiceId)
+  return { primary, secondary }
 }
 
-function calcAutomated(inputs: CalculatorInputs): CostBreakdown {
-  const apiCost = inputs.videoHours * 60 * inputs.apiCostPerMinute
-  const editHours = inputs.videoHours * inputs.editTimeRatio
-  const laborCost = editHours * inputs.manualCostPerHour
-  const servicePerProject = inputs.monthlyServiceCost / inputs.projectsPerMonth
-  const overheadPerProject = inputs.monthlyOverhead / inputs.projectsPerMonth
-  const totalPerProject = apiCost + laborCost + servicePerProject + overheadPerProject
-  const totalMonthly =
-    (apiCost + laborCost) * inputs.projectsPerMonth +
-    inputs.monthlyServiceCost +
-    inputs.monthlyOverhead
+export function calculate(inputs: CalculatorInputs): CalculatorResult {
+  const { primary, secondary } = getSelectedServices(inputs)
+  const rate = inputs.usdToRubRate
 
-  return {
-    laborHours: editHours,
-    laborCost,
-    apiCost,
-    serviceCost: inputs.monthlyServiceCost,
-    totalPerProject,
-    totalMonthly,
-    costPerVideoHour: totalPerProject / inputs.videoHours,
-    timePerProject: editHours,
-  }
-}
+  const totalVideoHours =
+    inputs.videoCount * (inputs.videoDurationMinutes / 60)
+  const totalReels = totalVideoHours * REELS_PER_HOUR
+  const hasTwoServices = Boolean(secondary)
+  const processingMinutesPerHour = hasTwoServices
+    ? PROCESSING_MINUTES_TWO_SERVICES
+    : PROCESSING_MINUTES_ONE_SERVICE
+  const totalProcessingMinutes = totalVideoHours * processingMinutesPerHour
+  const timePerReelMinutes =
+    totalReels > 0 ? totalProcessingMinutes / totalReels : 0
 
-export function calculateComparison(
-  inputs: CalculatorInputs,
-): ComparisonResult {
-  const manual = calcManual(inputs)
-  const automated = calcAutomated(inputs)
+  const hourlyUsd =
+    (primary?.hourlyCostUsd ?? 0) + (secondary?.hourlyCostUsd ?? 0)
+  const monthlyUsd =
+    (primary?.monthlyCostUsd ?? 0) + (secondary?.monthlyCostUsd ?? 0)
 
-  const savingsPerProject = manual.totalPerProject - automated.totalPerProject
-  const savingsMonthly = manual.totalMonthly - automated.totalMonthly
-  const savingsPercent =
-    manual.totalMonthly > 0 ? (savingsMonthly / manual.totalMonthly) * 100 : 0
-  const timeSavedPerProject = manual.timePerProject - automated.timePerProject
-  const timeSavedPercent =
-    manual.timePerProject > 0
-      ? (timeSavedPerProject / manual.timePerProject) * 100
+  const processingCostPerHourRub = hourlyUsd * rate
+  const monthlySubscriptionRub = monthlyUsd * rate
+  const variableProjectCostRub = processingCostPerHourRub * totalVideoHours
+  const projectProcessingCostRub =
+    variableProjectCostRub + monthlySubscriptionRub
+  const automationCostRub =
+    (totalVideoHours / AUTOMATION_HOURS) * AUTOMATION_COST_RUB
+  const projectCostWithoutAutomationRub = projectProcessingCostRub
+  const projectCostWithAutomationRub =
+    projectProcessingCostRub + automationCostRub
+
+  const reelCostWithoutAutomationRub =
+    totalReels > 0 ? projectCostWithoutAutomationRub / totalReels : 0
+  const reelCostWithAutomationRub =
+    totalReels > 0 ? projectCostWithAutomationRub / totalReels : 0
+
+  const reelPriceForClient = inputs.clientPricePerHour / REELS_PER_HOUR
+  const projectPriceForClient = inputs.clientPricePerHour * totalVideoHours
+
+  const marginWithoutAutomation =
+    projectPriceForClient > 0
+      ? ((projectPriceForClient - projectCostWithoutAutomationRub) /
+          projectPriceForClient) *
+        100
+      : 0
+  const marginWithAutomation =
+    projectPriceForClient > 0
+      ? ((projectPriceForClient - projectCostWithAutomationRub) /
+          projectPriceForClient) *
+        100
       : 0
 
   return {
-    manual,
-    automated,
-    savingsPerProject,
-    savingsMonthly,
-    savingsPercent,
-    timeSavedPerProject,
-    timeSavedPercent,
-  }
-}
-
-function calcUnitEconomicsRow(
-  margin: number,
-  costPerProject: number,
-  videoHours: number,
-  projectsPerMonth: number,
-  fixedMonthlyCost: number,
-): UnitEconomicsRow {
-  const marginFraction = margin / 100
-  const sellingPricePerHour =
-    costPerProject / videoHours / (1 - marginFraction)
-  const revenuePerProject = sellingPricePerHour * videoHours
-  const profitPerProject = revenuePerProject - costPerProject
-  const monthlyRevenue = revenuePerProject * projectsPerMonth
-  const monthlyProfit = profitPerProject * projectsPerMonth
-  const breakEvenProjects =
-    profitPerProject > 0
-      ? Math.ceil(fixedMonthlyCost / profitPerProject)
-      : Infinity
-  const roi =
-    costPerProject > 0 ? (profitPerProject / costPerProject) * 100 : 0
-
-  return {
-    margin,
-    sellingPricePerHour,
-    revenuePerProject,
-    profitPerProject,
-    monthlyRevenue,
-    monthlyProfit,
-    breakEvenProjects,
-    roi,
+    project: {
+      totalVideoHours,
+      totalReels,
+      processingMinutesPerHour,
+      totalProcessingMinutes,
+      timePerReelMinutes,
+    },
+    costs: {
+      processingCostPerHourRub,
+      monthlySubscriptionRub,
+      projectProcessingCostRub,
+      automationCostRub,
+      projectCostWithoutAutomationRub,
+      projectCostWithAutomationRub,
+      reelCostWithoutAutomationRub,
+      reelCostWithAutomationRub,
+    },
+    client: {
+      clientPricePerHour: inputs.clientPricePerHour,
+      reelPriceForClient,
+      projectPriceForClient,
+      marginWithoutAutomation,
+      marginWithAutomation,
+    },
   }
 }
 
 export function calculateUnitEconomics(
-  inputs: CalculatorInputs,
-  comparison: ComparisonResult,
-): UnitEconomicsResult {
-  const manualFixed = inputs.monthlyOverhead
-  const autoFixed = inputs.monthlyServiceCost + inputs.monthlyOverhead
+  result: CalculatorResult,
+  withAutomation: boolean,
+): UnitEconomicsRow[] {
+  const costPerProject = withAutomation
+    ? result.costs.projectCostWithAutomationRub
+    : result.costs.projectCostWithoutAutomationRub
+  const totalReels = result.project.totalReels
 
-  const manual = MARGINS.map((m) =>
-    calcUnitEconomicsRow(
-      m,
-      comparison.manual.totalPerProject,
-      inputs.videoHours,
-      inputs.projectsPerMonth,
-      manualFixed,
-    ),
+  return MARGINS.map((margin) => {
+    const marginFraction = margin / 100
+    const sellingPricePerReel =
+      totalReels > 0
+        ? costPerProject / totalReels / (1 - marginFraction)
+        : 0
+    const revenuePerProject = sellingPricePerReel * totalReels
+    const profitPerProject = revenuePerProject - costPerProject
+    const profitPerReel =
+      totalReels > 0 ? profitPerProject / totalReels : 0
+    const roi =
+      costPerProject > 0 ? (profitPerProject / costPerProject) * 100 : 0
+
+    return {
+      margin,
+      sellingPricePerReel,
+      revenuePerProject,
+      profitPerProject,
+      profitPerReel,
+      roi,
+    }
+  })
+}
+
+function funnelStep(
+  stage: string,
+  count: number,
+  conversionRate: number | null,
+): SalesFunnelStep {
+  return { stage, count, conversionRate }
+}
+
+export function calculateSalesFunnel(
+  result: CalculatorResult,
+  targetRevenue = 1_000_000,
+): SalesFunnelResult {
+  const projectPrice = result.client.projectPriceForClient
+  const projectsNeeded =
+    projectPrice > 0 ? Math.ceil(targetRevenue / projectPrice) : Infinity
+
+  const deals = projectsNeeded
+  const proposals = Math.ceil(deals / FUNNEL_CONVERSION_RATES.proposalToDeal)
+  const meetings = Math.ceil(
+    proposals / FUNNEL_CONVERSION_RATES.meetingToProposal,
   )
-
-  const automated = MARGINS.map((m) =>
-    calcUnitEconomicsRow(
-      m,
-      comparison.automated.totalPerProject,
-      inputs.videoHours,
-      inputs.projectsPerMonth,
-      autoFixed,
-    ),
+  const qualified = Math.ceil(
+    meetings / FUNNEL_CONVERSION_RATES.qualifiedToMeeting,
   )
+  const leads = Math.ceil(qualified / FUNNEL_CONVERSION_RATES.leadToQualified)
 
-  return { manual, automated }
+  return {
+    targetRevenue,
+    projectPrice,
+    projectsNeeded: deals,
+    steps: [
+      funnelStep('Сделки (закрытые проекты)', deals, null),
+      funnelStep(
+        'Коммерческие предложения',
+        proposals,
+        FUNNEL_CONVERSION_RATES.proposalToDeal,
+      ),
+      funnelStep(
+        'Встречи / демо',
+        meetings,
+        FUNNEL_CONVERSION_RATES.meetingToProposal,
+      ),
+      funnelStep(
+        'Квалифицированные лиды',
+        qualified,
+        FUNNEL_CONVERSION_RATES.qualifiedToMeeting,
+      ),
+      funnelStep(
+        'Заявки (лиды)',
+        leads,
+        FUNNEL_CONVERSION_RATES.leadToQualified,
+      ),
+    ],
+  }
 }
 
 export function formatCurrency(value: number): string {
@@ -162,4 +211,22 @@ export function formatNumber(value: number, decimals = 1): string {
 export function formatPercent(value: number): string {
   if (!isFinite(value)) return '—'
   return `${formatNumber(value, 1)}%`
+}
+
+export function formatMinutes(value: number): string {
+  if (!isFinite(value)) return '—'
+  if (value < 60) return `${formatNumber(value, 1)} мин`
+  const hours = Math.floor(value / 60)
+  const mins = Math.round(value % 60)
+  return mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`
+}
+
+export function formatUsd(value: number): string {
+  if (!isFinite(value)) return '—'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
